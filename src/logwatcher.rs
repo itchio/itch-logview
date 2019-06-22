@@ -1,3 +1,9 @@
+// ripped from https://crates.io/crates/logwatcher (also MIT-licensed)
+// and replaced inode comparison with ctime (file creation time) comparison
+// so it's cross-platform.
+
+// not happy with that code, but didn't want to spend any more time on it.
+
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
