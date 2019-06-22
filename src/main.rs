@@ -3,9 +3,9 @@ use clap::{App, Arg};
 use colored::{Color, Colorize};
 use serde::Deserialize;
 use std::fmt;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
+
+mod logwatcher;
+use logwatcher::LogWatcher;
 
 // Sample log lines:
 // {"time":1552019857416,"level":30,"msg":"Scheduling next game update check for Thu Mar 07 2019 23:58:57 GMT-0500 (Eastern Standard Time)","name":"m/reac/updater"}
@@ -92,15 +92,22 @@ fn main() {
                 .required(true)
                 .index(1),
         )
+        .arg(
+            Arg::with_name("follow")
+                .short("f")
+                .long("follow")
+                .help("Have 'tail -f'-like behavior"),
+        )
         .get_matches();
 
-    let log = matches.value_of("log").unwrap();
-    let f = File::open(log).unwrap();
-    let f = BufReader::new(f);
+    let log_file = matches.value_of("log").unwrap();
+    let follow = matches.is_present("follow");
 
-    for line in f.lines() {
-        let line = line.unwrap();
-        let line: LogLine = serde_json::from_str(&line).unwrap();
+    let on_line = &|line: String| {
+        let line: LogLine = match serde_json::from_str(&line) {
+            Ok(line) => line,
+            Err(_) => return,
+        };
 
         print!(
             "{prefix}",
@@ -130,6 +137,19 @@ fn main() {
             println!("{}", "}".white());
         } else {
             println!(" {msg}", msg = line.msg.color(line.level.color()));
+        }
+    };
+
+    if follow {
+        let mut log_watcher = LogWatcher::register(log_file.to_string()).unwrap();
+        log_watcher.watch(on_line);
+    } else {
+        use std::fs::File;
+        use std::io::{BufRead, BufReader};
+        let f = File::open(log_file).unwrap();
+        let f = BufReader::new(f);
+        for line in f.lines() {
+            on_line(line.unwrap());
         }
     }
 }
