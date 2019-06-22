@@ -13,7 +13,7 @@ And by itch, I mean [the itch.io app](https://github.com/itchio/itch).
 Clone the repository and cd into it, then:
 
 ```bash
-cargo install --path . --force
+cargo install itch-logview
 ```
 
 ## Usage
